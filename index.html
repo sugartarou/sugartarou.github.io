@@ -1,133 +1,111 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>sugartarou's page</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="iOSアプリリリースのためにつくったほーむぺーじ">
-<meta name="keywords" content="セットリストメーカー,set list maker,セトリ,開発,アプリ開発">
-<link rel="stylesheet" href="css/style.css">
-<script src="js/fixmenu_pagetop.js"></script>
-<!--[if lt IE 9]>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>sugartarou's page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="iOSアプリリリースのためにつくったほーむぺーじ">
+    <meta name="keywords" content="セットリストメーカー,set list maker,セトリ,開発,アプリ開発">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/fixmenu_pagetop.js"></script>
+    <!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<script>
-$(function(){
-$('a[href^="#"]').click(function() {
-var speed = 800;
-var href= $(this).attr("href");
-var target = $(href == "#" || href == "" ? 'html' : href);
-var position = target.offset().top$('body,html').animate({scrollTop:position}, speed, 'swing');
-return false;
-});
-});
-</script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script>
+    $(function() {
+        $('a[href^="#"]').click(function() {
+            var speed = 800;
+            var href = $(this).attr("href");
+            var target = $(href == "#" || href == "" ? 'html' : href);
+            var position = target.offset().top$('body,html').animate({ scrollTop: position }, speed, 'swing');
+            return false;
+        });
+    });
+    </script>
 </head>
 
 <body>
-
-<header>
-<h1 id="logo"><a href="index.html"><img src="images/logo.png" alt="Sugartarou Logo"></a></h1>
-<nav id="menubar">
-<ul>
-<li><a href="#new">What's New</a></li>
-<li><a href="#Develop">Develop</a></li>
-<li><a href="#Product">Product</a></li>
-<li><a href="#contact">Contact</a></li>
-</ul>
-</nav>
-</header>
-
-<div id="container">
-
-<div id="contents">
-
-<section id="new">
-
-<h2>What's New</h2>
-<dl>
-<dt>2021/06/13</dt>
-<dd>iOSアプリをリリースするためだけにこのホームページを作成・公開</dd>
-</dl>
-
-</section>
-<!--/#new-->
-
-<section id="Develop">
-
-<h2>Develop</h2>
-
-<h3>開発日記的な。</h3>
-<table class="ta1">
-<tr>
-<th>セットリストメーカー</th>
-<td>iOS/Android向けのアプリ。Twitterで友達にほしいって言われたから作り始めた。</td>
-</tr>
-</table>
-
-</section>
-<!--/#Develop-->
-
-<section id="Product">
-
-<h2>Product</h2>
-
-<div class="list">
-<img src="images/icon.png" alt="">
-<h4><a href="product/setlistmaker">セットリストメーカー</a></h4>
-<p>iOS/<a href="https://play.google.com/store/apps/details?id=com.sugartarou.set_list_maker2">Android</a>向けのアプリ。Twitterで友達にほしいって言われたから作り始めた。</p><br>
-<p class="float_none">
-	<br>
-	【このアプリについて】
-	ライヴのセットリストを作って，合計時間を算出できます．<br>
-	曲の時間，MCの時間などをリスト内にそれぞれ入力して使います．<br>
-</p><br>
-
-<p>
-	【使い方】
-	リスト内の項目をタップすることで，その項目の内容（曲名orMCなど）と，時間（分,秒）の入力が出来ます．<br>
-	リスト内の項目を追加するには，画面右下の＋ボタンをタップすることで出来ます．<br>
-	リスト内の項目を削除するには，削除したい項目を右から左にスワイプすることで出来ます．<br>
-	アプリをタスクキルしても入力した項目は保存されたままですのでご安心を．<br>
-</p><br>
-
-<p>
-	【今後のアップデートについて】<br>
-	今後は以下の機能を実装予定です．<br>
-	①セットリストを複数保存出来るようにする．<br>
-	　各セットリストに名前を付けれるように．．．<br>
-	②セットリストを空にするボタンの実装<br>
-</p>
-</div>
-
-</section>
-<!--/#Product-->
-
-<section id="contact">
-
-<h2>Contact</h2>
-<p class="c">基本TwitterにDMくれれば読みます。</p>
-<p class="c"><a href="https://twitter.com/12guitar21">しゅがーたろう</a></p>
-
-</section>
-<!--/#contact-->
-
-</div>
-<!--/#contents-->
-
-</div>
-<!--/#container-->
-
-<footer>
-<small>Copyright&copy; <a href="index.html">Sugartarou</a> All Rights Reserved.</small>
-<span class="pr">《<a href="https://template-party.com/" target="_blank">Web Design:Template-Party</a>》</span>
-</footer>
-
-<!--ページの上部に戻る「↑」ボタン-->
-<p class="nav-fix-pos-pagetop"><a href="#">↑</a></p>
-
+    <header>
+        <h1 id="logo"><a href="index.html"><img src="images/logo.png" alt="Sugartarou Logo"></a></h1>
+        <nav id="menubar">
+            <ul>
+                <li><a href="#new">What's New</a></li>
+                <li><a href="#Develop">Develop</a></li>
+                <li><a href="#Product">Product</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div id="container">
+        <div id="contents">
+            <section id="new">
+                <h2>What's New</h2>
+                <dl>
+                    <dt>2021/06/13</dt>
+                    <dd>iOSアプリをリリースするためだけにこのホームページを作成・公開</dd>
+                </dl>
+            </section>
+            <!--/#new-->
+            <section id="Develop">
+                <h2>Develop</h2>
+                <h3>開発日記的な。</h3>
+                <table class="ta1">
+                    <tr>
+                        <th>セットリストメーカー</th>
+                        <td>iOS/Android向けのアプリ。Twitterで友達にほしいって言われたから作り始めた。</td>
+                    </tr>
+                </table>
+            </section>
+            <!--/#Develop-->
+            <section id="Product">
+                <h2>Product</h2>
+                <div class="list">
+                    <img src="images/icon.png" alt="">
+                    <h4><a href="product/setlistmaker">セットリストメーカー</a></h4>
+                    <p>iOS/<a href="https://play.google.com/store/apps/details?id=com.sugartarou.set_list_maker2">Android</a>向けのアプリ。Twitterで友達にほしいって言われたから作り始めた。</p><br>
+                    <p class="float_none">
+                        <br>
+                        【このアプリについて】
+                        ライヴのセットリストを作って，合計時間を算出できます．<br>
+                        曲の時間，MCの時間などをリスト内にそれぞれ入力して使います．<br>
+                    </p><br>
+                    <p>
+                        【使い方】
+                        リスト内の項目をタップすることで，その項目の内容（曲名orMCなど）と，時間（分,秒）の入力が出来ます．<br>
+                        リスト内の項目を追加するには，画面右下の＋ボタンをタップすることで出来ます．<br>
+                        リスト内の項目を削除するには，削除したい項目を右から左にスワイプすることで出来ます．<br>
+                        アプリをタスクキルしても入力した項目は保存されたままですのでご安心を．<br>
+                    </p><br>
+                    <p>
+                        【今後のアップデートについて】<br>
+                        今後は以下の機能を実装予定です．<br>
+                        ①セットリストを複数保存出来るようにする．<br>
+                        　各セットリストに名前を付けれるように．．．<br>
+                        ②セットリストを空にするボタンの実装<br>
+                    </p>
+                </div>
+            </section>
+            <!--/#Product-->
+            <section id="contact">
+                <h2>Contact</h2>
+                <p class="c">基本TwitterにDMくれれば読みます。</p>
+                <p class="c"><a href="https://twitter.com/12guitar21">しゅがーたろう</a></p>
+            </section>
+            <!--/#contact-->
+        </div>
+        <!--/#contents-->
+    </div>
+    <!--/#container-->
+    <footer>
+        <small>Copyright&copy; <a href="index.html">Sugartarou</a> All Rights Reserved.</small>
+        <span class="pr">《<a href="https://template-party.com/" target="_blank">Web Design:Template-Party</a>》</span>
+    </footer>
+    <!--ページの上部に戻る「↑」ボタン-->
+    <p class="nav-fix-pos-pagetop"><a href="#">↑</a></p>
 </body>
+
 </html>
