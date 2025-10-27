@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>リダイレクト中...</title>
+    <script>
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            
+            // パラメータを取得 (t:title, d:description, i:image, u:url)
+            const targetUrl = params.get('u');
+            const cardTitle = params.get('t'); // リンク先URLがそのままタイトルとして使用される
+            const cardDescription = params.get('d'); // リンク先URLがそのまま説明として使用される
+            const imageUrl = params.get('i');
+
+            // 最終的な公開URL (クローラーが参照するURL)
+            const finalDeploymentUrl = window.location.href;
+
+            // リダイレクト先のURLがない場合、エラー表示
+            if (!targetUrl) {
+                document.title = "エラー: リダイレクト先URLがありません";
+                if (document.body) {
+                    document.body.innerHTML = `
+                        <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+                            <h1>エラー: リダイレクト先URLが見つかりません (u= がありません)</h1>
+                            <p>URLパラメータが正しく設定されていません。ツールに戻って確認してください。</p>
+                        </div>
+                    `;
+                }
+                return; // リダイレクトもメタタグ生成も停止
+            }
+
+            // --- 1. メタタグを動的に生成・挿入 ---
+            // ページタイトルも設定
+            document.title = cardTitle || 'リダイレクト中...';
+
+            const metaTags = [
+                // OGP (Discord/汎用)
+                { property: "og:title", content: cardTitle },
+                { property: "og:description", content: cardDescription },
+                { property: "og:image", content: imageUrl },
+                { property: "og:url", content: finalDeploymentUrl },
+                { property: "og:type", content: "website" },
+                { property: "og:locale", content: "ja_JP" },
+
+                // Twitter Card (X)
+                { name: "twitter:card", content: "summary_large_image" },
+                { name: "twitter:title", content: cardTitle },
+                { name: "twitter:description", content: cardDescription },
+                { name: "twitter:image", content: imageUrl },
+                { name: "twitter:url", content: finalDeploymentUrl },
+            ];
+
+            const head = document.head;
+            metaTags.forEach(tagData => {
+                // contentがnullやundefinedでない場合のみタグを生成
+                if (tagData.content) { 
+                    const meta = document.createElement('meta');
+                    if (tagData.property) meta.setAttribute('property', tagData.property);
+                    if (tagData.name) meta.setAttribute('name', tagData.name);
+                    meta.setAttribute('content', tagData.content);
+                    head.appendChild(meta);
+                }
+            });
+
+            // --- 2. リダイレクト処理 ---
+            // ページが開かれたらすぐに指定のURLへリダイレクトします
+            window.location.replace(targetUrl);
+
+        })(); // 即時実行関数で囲む
+    </script>
+    
+    <noscript>
+        <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1>リダイレクト中</h1>
+            <p>JavaScriptを有効にしてください。ページが自動的に移動します。</p>
+        </div>
+    </noscript>
+    <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+        <p>ページへ移動中...</p>
+        <p>自動的にリダイレクトされない場合は、URLを確認してください。</p>
+    </div>
+</body>
+</html>

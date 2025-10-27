@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OGP/カードURL生成ツール</title>
+    <!-- Tailwind CSS CDNをロード -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary-blue': '#1DA1F2', // Twitter Blue
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .container {
+            max-width: 800px;
+        }
+        .btn-action {
+            /* ボタンが押されたときのエフェクト */
+            transform: scale(1);
+            transition: transform 0.1s;
+        }
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+        .text-area-output {
+            min-height: 40px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-10 px-4 font-sans">
+
+    <div class="container mx-auto p-6 bg-white shadow-xl rounded-2xl border border-gray-100">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-3">
+            🔗 OGP/カードURL生成ツール
+        </h1>
+        <p class="text-gray-700 mb-6">
+            リダイレクト先のURLと画像URLを入力すると、SNS共有用のURLを生成します。
+        </p>
+
+        <div id="generator-form" class="space-y-6">
+
+            <!-- リンクしたいURL入力欄 (ターゲットURL) -->
+            <div class="input-group">
+                <label for="targetUrl" class="block text-sm font-medium text-gray-700 mb-1">
+                    リンク先URL
+                </label>
+                <input type="url" id="targetUrl" placeholder="https://hogehoge.com/hogehoge" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+            </div>
+            
+            <!-- カードに表示する画像URL入力欄 -->
+            <div class="input-group">
+                <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">
+                    表示する画像のURL
+                </label>
+                <input type="url" id="imageUrl" placeholder="例: https://example.com/cover.jpg" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+            </div>
+
+            <!-- ボタンエリア -->
+            <div class="flex flex-wrap md:flex-nowrap gap-4 pt-4">
+                <button onclick="handleCopy()" id="copyUrlButton" class="w-full md:w-auto flex-1 bg-yellow-500 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-yellow-600 transition duration-200 btn-action">
+                    URLをコピーする
+                </button>
+                <a id="tweetLink" href="#" target="_blank" onclick="handlePost(event)" class="w-full md:w-auto flex-1 text-center bg-gray-800 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-black transition duration-200 flex items-center justify-center btn-action">
+                    <svg fill="currentColor" viewBox="0 0 24 24" class="w-5 h-5 mr-2">
+                        <path d="M18.9 1.5l-6.5 7.8L5 1.5H3.1l8.5 12L3.1 22.5h1.9l6.5-7.8L19 22.5h1.9l-8.5-12 8.5-10.8zM6.9 3.5h.7L17.2 20.5h-.7L6.9 3.5z"/>
+                    </svg>
+                    Xでポストする
+                </a>
+            </div>
+            
+        </div>
+
+        <!-- 結果表示エリア (隠された状態のまま) -->
+        <div id="output-area" class="mt-10 pt-6 border-t border-gray-200 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">生成された公開URL (動作確認用)</h2>
+            <p class="text-sm text-gray-600 mb-3">
+                ボタンを押すと、このURLが生成され、アクションが実行されます。
+            </p>
+            
+            <textarea id="outputUrl" class="text-area-output w-full p-4 border border-gray-400 rounded-lg font-mono text-sm bg-gray-50 resize-none" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        let finalDeploymentUrl = '';
+
+        /**
+         * フォーム入力から最終的なリダイレクト用URLを生成し、状態を更新します。
+         * @returns {string | null} 生成されたURL、または入力エラーの場合はnull。
+         */
+        function computeAndSetUrl() {
+            const targetUrl = document.getElementById('targetUrl').value.trim();
+            const imageUrl = document.getElementById('imageUrl').value.trim();
+
+            if (!targetUrl || !imageUrl) {
+                showModal('入力エラー', '「リンク先URL」と「表示する画像のURL」の両方を入力してください。', 'error');
+                return null;
+            }
+
+            // 1. ベースURLの決定 (redirect.htmlへのパス)
+            const generatorUrl = window.location.href;
+            let baseUrl;
+            if (generatorUrl.endsWith('/')) {
+                baseUrl = generatorUrl + 'redirect.html';
+            } else {
+                baseUrl = generatorUrl.substring(0, generatorUrl.lastIndexOf('/') + 1) + 'redirect.html';
+            }
+
+            // 2. パラメータの決定
+            // 要件: カードのタイトル(t)と説明(d)は、リダイレクト先のURL(u)をそのまま使用
+            const cardTitle = targetUrl;
+            const cardDescription = targetUrl;
+            
+            const params = new URLSearchParams();
+            params.append('t', cardTitle);         // Title (ターゲットURL)
+            params.append('d', cardDescription);   // Description (ターゲットURL)
+            params.append('i', imageUrl);          // Image URL
+            params.append('u', targetUrl);         // Target URL (リダイレクト先)
+
+            // 3. 最終的なURLの構築
+            finalDeploymentUrl = baseUrl.split('?')[0] + '?' + params.toString();
+
+            // 4. UIの更新 (デバッグ/確認用)
+            document.getElementById('outputUrl').value = finalDeploymentUrl;
+            document.getElementById('output-area').classList.remove('hidden');
+            
+            // 5. X (Twitter) ポストリンクのhrefを更新
+            const tweetText = `${cardTitle} ${finalDeploymentUrl}`;
+            const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+            document.getElementById('tweetLink').href = tweetUrl;
+
+            return finalDeploymentUrl;
+        }
+
+        /**
+         * URLを生成し、クリップボードにコピーします。
+         */
+        function handleCopy() {
+            const url = computeAndSetUrl();
+            if (!url) return;
+            
+            // クリップボードにコピー
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy'); 
+            document.body.removeChild(textarea);
+
+            showCopyFeedback(document.getElementById('copyUrlButton'), 'URLをコピーしました！');
+        }
+
+        /**
+         * URLを生成し、X (Twitter) 投稿ウィンドウを開きます。
+         */
+        function handlePost(event) {
+            const url = computeAndSetUrl();
+            if (!url) {
+                event.preventDefault(); // URL生成に失敗したらリンク遷移を停止
+                return;
+            }
+            // computeAndSetUrl()内で href は既に設定されているため、そのままリンク遷移を実行
+            // window.open() は anchor タグの target="_blank" に任せる
+        }
+
+
+        /**
+         * コピーボタンのフィードバックを表示します。
+         */
+        function showCopyFeedback(button, message) {
+            const originalText = button.textContent;
+            button.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+            button.classList.add('bg-gray-600', 'cursor-not-allowed');
+            button.textContent = message;
+            button.disabled = true;
+
+            setTimeout(() => {
+                button.classList.remove('bg-gray-600', 'cursor-not-allowed');
+                button.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 1500);
+        }
+
+        /**
+         * カスタムモーダルを表示します (alert()の代替)
+         */
+        function showModal(title, message, type) {
+            closeModal();
+
+            const colors = {
+                'error': 'bg-red-500',
+                'warning': 'bg-yellow-500',
+                'info': 'bg-primary-blue'
+            };
+            const color = colors[type] || 'bg-gray-500';
+
+            const modalHtml = `
+                <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4" onclick="closeModal()">
+                    <div class="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-sm" onclick="event.stopPropagation()">
+                        <div class="${color} text-white p-4 font-bold text-lg">${title}</div>
+                        <div class="p-6">
+                            <p class="text-gray-700">${message}</p>
+                            <button onclick="closeModal()" class="mt-6 w-full ${color} text-white font-semibold py-2 rounded-lg hover:opacity-90 transition">
+                                閉じる
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        /**
+         * カスタムモーダルを閉じます
+         */
+        function closeModal() {
+            const modal = document.getElementById('customModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+    </script>
+</body>
+</html>
