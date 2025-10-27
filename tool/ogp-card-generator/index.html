@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OGP/カードURL生成ツール</title>
+    <title>OGPリンク生成・デプロイツール</title>
     <!-- Tailwind CSS CDNをロード -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -25,7 +25,6 @@
             max-width: 800px;
         }
         .btn-action {
-            /* ボタンが押されたときのエフェクト */
             transform: scale(1);
             transition: transform 0.1s;
         }
@@ -36,122 +35,151 @@
             min-height: 40px;
         }
     </style>
-</head>
-<body class="bg-gray-50 min-h-screen py-10 px-4 font-sans">
-
-    <div class="container mx-auto p-6 bg-white shadow-xl rounded-2xl border border-gray-100">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-3">
-            🔗 OGP/カードURL生成ツール
-        </h1>
-        <p class="text-gray-700 mb-6">
-            リダイレクト先のURLと画像URLを入力すると、SNS共有用のURLを生成します。
-        </p>
-
-        <div id="generator-form" class="space-y-6">
-
-            <!-- リンクしたいURL入力欄 (ターゲットURL) -->
-            <div class="input-group">
-                <label for="targetUrl" class="block text-sm font-medium text-gray-700 mb-1">
-                    リンク先URL
-                </label>
-                <input type="url" id="targetUrl" placeholder="https://hogehoge.com/hogehoge" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
-            </div>
-            
-            <!-- カードに表示する画像URL入力欄 -->
-            <div class="input-group">
-                <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">
-                    表示する画像のURL
-                </label>
-                <input type="url" id="imageUrl" placeholder="例: https://example.com/cover.jpg" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
-            </div>
-
-            <!-- ボタンエリア -->
-            <div class="flex flex-wrap md:flex-nowrap gap-4 pt-4">
-                <button onclick="handleCopy()" id="copyUrlButton" class="w-full md:w-auto flex-1 bg-yellow-500 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-yellow-600 transition duration-200 btn-action">
-                    URLをコピーする
-                </button>
-                <a id="tweetLink" href="#" target="_blank" onclick="handlePost(event)" class="w-full md:w-auto flex-1 text-center bg-gray-800 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-black transition duration-200 flex items-center justify-center btn-action">
-                    <svg fill="currentColor" viewBox="0 0 24 24" class="w-5 h-5 mr-2">
-                        <path d="M18.9 1.5l-6.5 7.8L5 1.5H3.1l8.5 12L3.1 22.5h1.9l6.5-7.8L19 22.5h1.9l-8.5-12 8.5-10.8zM6.9 3.5h.7L17.2 20.5h-.7L6.9 3.5z"/>
-                    </svg>
-                    Xでポストする
-                </a>
-            </div>
-            
-        </div>
-
-        <!-- 結果表示エリア (隠された状態のまま) -->
-        <div id="output-area" class="mt-10 pt-6 border-t border-gray-200 hidden">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">生成された公開URL (動作確認用)</h2>
-            <p class="text-sm text-gray-600 mb-3">
-                ボタンを押すと、このURLが生成され、アクションが実行されます。
-            </p>
-            
-            <textarea id="outputUrl" class="text-area-output w-full p-4 border border-gray-400 rounded-lg font-mono text-sm bg-gray-50 resize-none" readonly></textarea>
-        </div>
-    </div>
-
+    
+    <!-- スクリプトの定義を<head>で行い、onloadから参照できるようにします -->
     <script>
-        let finalDeploymentUrl = '';
+        const FIXED_OWNER = 'sugartarou';
+        const FIXED_REPO = 'sugartarou.github.io';
+        const FIXED_BRANCH = 'gh-pages'; // デフォルトブランチ
+
+        let finalGeneratedUrl = '';
+        let finalHtmlContent = '';
 
         /**
-         * フォーム入力から最終的なリダイレクト用URLを生成し、状態を更新します。
-         * @returns {string | null} 生成されたURL、または入力エラーの場合はnull。
+         * YYYYMMDDhhmmss-R の形式で一意なファイル名を生成し、UIに設定します。
          */
-        function computeAndSetUrl() {
-            const targetUrl = document.getElementById('targetUrl').value.trim();
-            const imageUrl = document.getElementById('imageUrl').value.trim();
+        function generateUniqueFileName() {
+            const now = new Date();
+            const YYYY = now.getFullYear();
+            const MM = String(now.getMonth() + 1).padStart(2, '0');
+            const DD = String(now.getDate()).padStart(2, '0');
+            const HH = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const random = Math.floor(Math.random() * 9) + 1; // 1-9の通し番号
 
-            if (!targetUrl || !imageUrl) {
-                showModal('入力エラー', '「リンク先URL」と「表示する画像のURL」の両方を入力してください。', 'error');
-                return null;
-            }
-
-            // 1. ベースURLの決定 (redirect.htmlへのパス)
-            const generatorUrl = window.location.href;
-            let baseUrl;
-            if (generatorUrl.endsWith('/')) {
-                baseUrl = generatorUrl + 'redirect.html';
-            } else {
-                baseUrl = generatorUrl.substring(0, generatorUrl.lastIndexOf('/') + 1) + 'redirect.html';
-            }
-
-            // 2. パラメータの決定
-            // 要件: カードのタイトル(t)と説明(d)は、リダイレクト先のURL(u)をそのまま使用
-            const cardTitle = targetUrl;
-            const cardDescription = targetUrl;
-            
-            const params = new URLSearchParams();
-            params.append('t', cardTitle);         // Title (ターゲットURL)
-            params.append('d', cardDescription);   // Description (ターゲットURL)
-            params.append('i', imageUrl);          // Image URL
-            params.append('u', targetUrl);         // Target URL (リダイレクト先)
-
-            // 3. 最終的なURLの構築
-            finalDeploymentUrl = baseUrl.split('?')[0] + '?' + params.toString();
-
-            // 4. UIの更新 (デバッグ/確認用)
-            document.getElementById('outputUrl').value = finalDeploymentUrl;
-            document.getElementById('output-area').classList.remove('hidden');
-            
-            // 5. X (Twitter) ポストリンクのhrefを更新
-            const tweetText = `${cardTitle} ${finalDeploymentUrl}`;
-            const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-            document.getElementById('tweetLink').href = tweetUrl;
-
-            return finalDeploymentUrl;
+            return `redirect-${YYYY}${MM}${DD}${HH}${mm}${ss}-${random}.html`;
         }
 
         /**
-         * URLを生成し、クリップボードにコピーします。
+         * ページロード時にファイル名を自動生成し、UIに設定します。
+         */
+        function initializeFileName() {
+            // hiddenフィールドにファイル名を設定
+            document.getElementById('fileName').value = generateUniqueFileName();
+        }
+
+
+        /**
+         * 最終的な静的HTMLコンテンツと公開URLを生成します。
+         * @returns {string | null} 生成されたHTML文字列、または入力エラーの場合はnull。
+         */
+        function generateStaticHtml() {
+            const targetUrl = document.getElementById('targetUrl').value.trim();
+            const imageUrl = document.getElementById('imageUrl').value.trim();
+            const customTitle = document.getElementById('cardTitle').value.trim(); // 新しいタイトル
+            const customDescription = document.getElementById('cardDescription').value.trim(); // 新しい説明
+            const fileName = document.getElementById('fileName').value.trim(); // hiddenフィールドから取得
+
+            if (!targetUrl || !imageUrl || !fileName) {
+                showModal('入力エラー', '「リンク先URL」と「表示する画像のURL」を入力してください。', 'error');
+                return null;
+            }
+
+            // GitHub Pagesの公開URLを計算
+            const publicBaseUrl = `https://${FIXED_OWNER}.github.io/tool/ogp-card-generator/pages/`;
+            
+            // 最終的なSNS共有URL (og:urlとtwitter:urlになる)
+            finalGeneratedUrl = publicBaseUrl + fileName;
+
+            // カードのタイトルと説明を簡潔な固定テキストにする
+            const cardTitle = [null, undefined].includes(customTitle) ? "リダイレクト中 - 外部コンテンツ" : customTitle;
+            const cardDescription = [null, undefined].includes(customDescription) ? "こちらをクリックして、詳細コンテンツへ移動してください。" : customDescription;
+
+            // --- 静的HTMLコンテンツの生成 ---
+            finalHtmlContent = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${cardTitle}</title>
+    
+    <!-- OGP (Discord/汎用) -->
+    <meta property="og:title" content="${cardTitle}">
+    <meta property="og:description" content="${cardDescription}">
+    <meta property="og:image" content="${imageUrl}">
+    <meta property="og:url" content="${finalGeneratedUrl}">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ja_JP">
+
+    <!-- Twitter Card (X) -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${cardTitle}">
+    <meta name="twitter:description" content="${cardDescription}">
+    <meta name="twitter:image" content="${imageUrl}">
+    <meta name="twitter:url" content="${finalGeneratedUrl}">
+
+    <script>
+        // 即座にリダイレクト
+        window.location.replace("${targetUrl}");
+    <` + `/script>
+<` + `/head>
+<` + `body style="font-family: sans-serif; text-align: center; padding: 50px;">
+    <` + `h1>リダイレクト中</h1>
+    <` + `p>自動的に移動しない場合は、<a href="${targetUrl}">こちら</a>をクリックしてください。</p>
+<` + `/body>
+<` + `/html>`;
+
+            const tweetText = `${cardTitle} ${finalGeneratedUrl}`;
+            const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+            document.getElementById('tweetLink').href = tweetUrl;
+
+            // 共有ボタンの有効化
+            document.getElementById('copyUrlButton').disabled = false;
+            document.getElementById('tweetLink').disabled = false;
+            document.getElementById('shareGuidance').classList.add('hidden');
+
+
+            return finalHtmlContent;
+        }
+
+        /**
+         * GitHub Webエディタにファイルを自動入力して開きます。
+         */
+        function handleDeploy() {
+            // HTMLコンテンツとURLを生成
+            const htmlContent = generateStaticHtml();
+            if (!htmlContent) return;
+
+            const fileName = document.getElementById('fileName').value.trim();
+
+            // GitHubの「新しいファイルを作成」URLを構築 (固定リポジトリを使用)
+            // HTMLコンテンツ全体をURLエンコードして渡す
+            const githubNewFileUrl = `https://github.com/${FIXED_OWNER}/${FIXED_REPO}/new/${FIXED_BRANCH}?filename=tool/ogp-card-generator/pages/${encodeURIComponent(fileName)}&value=${encodeURIComponent(htmlContent)}`;
+
+            // ユーザーにデプロイ後のURLを通知し、GitHubを開く
+            const successMessage = `
+                デプロイが完了すると、以下のURLで共有できます:<br><br>
+                <code class="text-sm font-mono break-all">${finalGeneratedUrl}</code><br><br>
+                新しいウィンドウでGitHubが開かれますので、「Commit changes」ボタンを押してデプロイを完了させてください。
+            `;
+            showModal('デプロイ確認', successMessage, 'info');
+            
+            window.open(githubNewFileUrl, '_blank');
+        }
+
+        /**
+         * 最終的な公開URLをクリップボードにコピーします。
          */
         function handleCopy() {
-            const url = computeAndSetUrl();
-            if (!url) return;
+            // URLが未生成の場合は生成を試みる
+            if (!finalGeneratedUrl) {
+                if (!generateStaticHtml()) return; 
+            }
             
             // クリップボードにコピー
             const textarea = document.createElement('textarea');
-            textarea.value = url;
+            textarea.value = finalGeneratedUrl;
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy'); 
@@ -161,22 +189,20 @@
         }
 
         /**
-         * URLを生成し、X (Twitter) 投稿ウィンドウを開きます。
+         * X (Twitter) 投稿ウィンドウを開きます。
          */
         function handlePost(event) {
-            const url = computeAndSetUrl();
-            if (!url) {
-                event.preventDefault(); // URL生成に失敗したらリンク遷移を停止
-                return;
+            // URLが未生成の場合は生成を試みる
+            if (!finalGeneratedUrl) {
+                if (!generateStaticHtml()) {
+                    event.preventDefault();
+                    return; 
+                }
             }
-            // computeAndSetUrl()内で href は既に設定されているため、そのままリンク遷移を実行
-            // window.open() は anchor タグの target="_blank" に任せる
+            // generateStaticHtml()内で href は既に設定されているため、そのままリンク遷移を実行
         }
 
-
-        /**
-         * コピーボタンのフィードバックを表示します。
-         */
+        // 以下、ユーティリティ関数（コピーフィードバック、モーダル）
         function showCopyFeedback(button, message) {
             const originalText = button.textContent;
             button.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
@@ -191,10 +217,6 @@
                 button.disabled = false;
             }, 1500);
         }
-
-        /**
-         * カスタムモーダルを表示します (alert()の代替)
-         */
         function showModal(title, message, type) {
             closeModal();
 
@@ -220,10 +242,6 @@
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
-
-        /**
-         * カスタムモーダルを閉じます
-         */
         function closeModal() {
             const modal = document.getElementById('customModal');
             if (modal) {
@@ -231,5 +249,81 @@
             }
         }
     </script>
+</head>
+<body class="bg-gray-50 min-h-screen py-10 px-4 font-sans" onload="initializeFileName()">
+
+    <div class="container mx-auto p-6 bg-white shadow-xl rounded-2xl border border-gray-100">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-3">
+            🚀 OGP/カードリンク自動デプロイ支援ツール
+        </h1>
+        <p class="text-gray-700 mb-6">
+            リンク設定を入力後、「GitHubにデプロイ」ボタンを押してリンクファイルを生成・コミットしてください。
+        </p>
+
+        <form id="generator-form" class="space-y-6" onsubmit="event.preventDefault(); return false;">
+            
+            <!-- リンクしたいURL入力欄 (ターゲットURL) -->
+            <div class="input-group">
+                <label for="targetUrl" class="block text-sm font-medium text-gray-700 mb-1">
+                    リンク先URL
+                </label>
+                <input type="url" id="targetUrl" placeholder="例: https://example.com/hogehoge" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+            </div>
+
+            <!-- カードに表示するタイトル -->
+            <div class="input-group">
+                <label for="cardTitle" class="block text-sm font-medium text-gray-700 mb-1">
+                    表示するタイトル
+                </label>
+                <input type="text" id="cardTitle" placeholder="例: おすすめの本" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+            </div>
+
+            <!-- カードに表示する説明文 -->
+            <div class="input-group">
+                <label for="cardDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                    表示する説明文
+                </label>
+                <input type="text" id="cardDescription" placeholder="例: ミステリー好きにおすすめ！" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+            </div>
+
+            
+            <!-- カードに表示する画像URL入力欄 -->
+            <div class="input-group">
+                <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">
+                    表示する画像のURL
+                </label>
+                <input type="url" id="imageUrl" placeholder="例: https://example.com/cover.jpg" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150">
+            </div>
+
+            <!-- デプロイ設定 (内部処理用) - 完全に非表示 -->
+            <div hidden>
+                <input type="text" id="fileName" readonly>
+            </div>
+
+            <!-- デプロイボタン -->
+            <button onclick="handleDeploy()" class="w-full bg-green-600 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-green-700 transition duration-200 btn-action text-lg">
+                🚀 GitHubにデプロイ (新しいファイルを作成)
+            </button>
+            
+            <div class="pt-4 border-t border-gray-200 mt-6 space-y-4">
+                
+                <div class="flex flex-wrap md:flex-nowrap gap-4">
+                    <button onclick="handleCopy()" id="copyUrlButton" class="w-full md:w-auto flex-1 bg-yellow-500 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-yellow-600 transition duration-200 btn-action" disabled>
+                        URLをコピーする
+                    </button>
+                    <a id="tweetLink" href="#" target="_blank" onclick="handlePost(event)" class="w-full md:w-auto flex-1 text-center bg-gray-800 text-white font-semibold py-3 rounded-xl shadow-md hover:bg-black transition duration-200 flex items-center justify-center btn-action" disabled>
+                        <svg fill="currentColor" viewBox="0 0 24 24" class="w-5 h-5 mr-2">
+                            <path d="M18.9 1.5l-6.5 7.8L5 1.5H3.1l8.5 12L3.1 22.5h1.9l6.5-7.8L19 22.5h1.9l-8.5-12 8.5-10.8zM6.9 3.5h.7L17.2 20.5h-.7L6.9 3.5z"/>
+                        </svg>
+                        Xでポストする
+                    </a>
+                </div>
+                <p id="shareGuidance" class="text-sm text-red-500 mt-3 hidden">
+                    ※ デプロイが完了したら、生成されたURLで共有アクションが実行可能になります。
+                </p>
+            </div>
+
+        </form>
+    </div>
 </body>
 </html>
